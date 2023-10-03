@@ -1,17 +1,15 @@
-import express from 'express';
-import {Request, Response} from 'express';
-import bodyParser from 'body-parser';
-import {filterImageFromURL, deleteLocalFiles} from '../src/util/util';
-
+import express from "express";
+import bodyParser from "body-parser";
+import { filterImageFromURL, deleteLocalFiles } from "./util/util";
+import { Request, Response } from "express";
 
 (async () => {
-
   // Init the Express application
   const app = express();
 
   // Set the network port
   const port = process.env.PORT || 8082;
-  
+
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
@@ -29,30 +27,36 @@ import {filterImageFromURL, deleteLocalFiles} from '../src/util/util';
   // RETURNS
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
-    /**************************************************************************** */
-  app.get("/filteredimage/",async (req: Request,res: Response)=>{
-      let {image_url}: any = req.query;
-      if( !image_url ) {
-        return res.status(422)
-                  .send(`Unprocessable entity`);
-      }
-        else{
-          filterImageFromURL(image_url).then((output)=>{
-          res.sendFile(String(output));
-          res.on(`finish`,()=>deleteLocalFiles([output]));
-          }).catch((err)=>res.status(422).send(err))
-        }
-    } );
+  /**************************************************************************** */
+
   //! END @TODO1
+  app.get("/filteredimage", async (request: Request, response: Response) => {
+    let urlImage: any = request.query.image_url;
+    // validate the image_url query
+    if (!urlImage) {
+      response.status(400).send({ message: "image_url is required" });
+    }
+    try {
+      const filteredPath = await filterImageFromURL(urlImage);
+      response.status(200).sendFile(filteredPath, {}, (err: any) => {
+        if (err) {
+          response.status(400).send("Send file error");
+        }
+        deleteLocalFiles([filteredPath]);
+      });
+    } catch (err) {
+      response.status(400).send(`Eror, Check your server!`);
+    }
+  });
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async (req, res) => {
-    res.send("try GET /filteredimage?image_url={{}}")
-  } );
-  
+  app.get("/", async (req, res) => {
+    res.send("try GET /filteredimage?image_url={{}}");
+  });
+
   // Start the Server
-  app.listen( port, () => {
-      console.log( `server running http://localhost:${ port }` );
-      console.log( `press CTRL+C to stop server` );
-    } );
-  })();
+  app.listen(port, () => {
+    console.log(`server running http://localhost:${port}`);
+    console.log(`press CTRL+C to stop server`);
+  });
+})();
